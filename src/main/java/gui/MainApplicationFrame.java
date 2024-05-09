@@ -2,11 +2,15 @@ package gui;
 
 import java.awt.*;
 import java.awt.event.*;
-
 import java.util.Locale;
 import java.util.ResourceBundle;
 import javax.swing.*;
+
+import State.AbstractWindow;
 import log.Logger;
+
+import model.RobotsLogic;
+import gui.GameWindow;
 
 /**
  * Главное окно приложения, содержащее панель рабочего стола и меню.
@@ -65,14 +69,19 @@ public class MainApplicationFrame extends JFrame {
      */
     private JDesktopPane createDesktopPane() {
         desktopPane = new JDesktopPane();
+        var logic = new RobotsLogic();
 
         // Добавляем окна на панель рабочего стола
         addWindow(createLogWindow(), 150, 350);
-        addWindow(new GameWindow(), 400, 400);
+        addWindow(new GameWindow(logic), 400, 400);
+        addWindow(new RobotInfo(logic), 150, 350);
+
+
 
         // Загружаем состояние каждого окна
         for (JInternalFrame frame : desktopPane.getAllFrames()) {
-            ((AbstractWindow) frame).loadWindow();
+            AbstractWindow abstractWindow = (AbstractWindow) frame;
+            abstractWindow.loadWindow();
         }
 
         return desktopPane;
@@ -114,16 +123,19 @@ public class MainApplicationFrame extends JFrame {
         return menuBar;
     }
 
+
+
     /**
      * Создает меню файлов.
      * @return Меню файлов.
      */
     private JMenu createFileMenu() {
+        var logic = new RobotsLogic();
         JMenu menu = new JMenu(messages.getString("Menu"));
         menu.setMnemonic(KeyEvent.VK_D);
 
         menu.add(createMenuItem(messages.getString("NewGameWindow"), KeyEvent.VK_N, KeyStroke.getKeyStroke(KeyEvent.VK_R, ActionEvent.ALT_MASK), (event) -> {
-            GameWindow window = new GameWindow();
+            GameWindow window = new GameWindow(logic);
             addWindow(window, 400, 400);
         }));
 
@@ -132,7 +144,16 @@ public class MainApplicationFrame extends JFrame {
             addWindow(window, 150, 350);
         }));
 
+
+        menu.add(createMenuItem(messages.getString("Coordinates"), KeyEvent.VK_L, KeyStroke.getKeyStroke(KeyEvent.VK_L, ActionEvent.ALT_MASK), (event) -> {
+            RobotInfo window = new RobotInfo(logic);
+            addWindow(window, 300, 200);
+        }));
+
+
         menu.add(exit());
+
+
 
         return menu;
     }
@@ -188,6 +209,7 @@ public class MainApplicationFrame extends JFrame {
         addLogMessageItem.addActionListener((event) -> {
             Logger.debug(messages.getString("NewString"));
         });
+
         testMenu.add(addLogMessageItem);
 
         return testMenu;
@@ -207,6 +229,16 @@ public class MainApplicationFrame extends JFrame {
     }
 
     /**
+     * Вызывает диалоговое окно закрытия для каждого окна на панели рабочего стола.
+     */
+    private void callCloseDialog(){
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            AbstractWindow abstractWindow = (AbstractWindow) frame;
+            abstractWindow.saveWindow();
+        }
+    }
+
+    /**
      * Завершает работу приложения.
      */
     private void exitApplication() {
@@ -218,14 +250,7 @@ public class MainApplicationFrame extends JFrame {
         callCloseDialog();
     }
 
-    /**
-     * Вызывает диалоговое окно закрытия для каждого окна на панели рабочего стола.
-     */
-    private void callCloseDialog(){
-        for (JInternalFrame frame : desktopPane.getAllFrames()) {
-            ((AbstractWindow) frame).saveWindow();
-        }
-    }
+
 
     /**
      * Создает элемент меню "Выход".
