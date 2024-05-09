@@ -3,13 +3,20 @@ package gui;
 import java.awt.BorderLayout;
 import javax.swing.JPanel;
 
+import State.AbstractWindow;
+import model.RobotsLogic;
 
 public class GameWindow extends AbstractWindow
 {
-    private final GameVisualizer m_visualizer;
 
-    public GameWindow() {
+    private final RobotsLogic logic;
+
+    public GameWindow(RobotsLogic logic) {
         super();
+
+        this.logic = logic;
+
+        logic.startTimer();
 
         setTitle("Игровое окно");
         setResizable(true);
@@ -17,17 +24,17 @@ public class GameWindow extends AbstractWindow
         setMaximizable(true);
         setIconifiable(true);
 
-        m_visualizer = new GameVisualizer();
+        GameVisualizer gameVisualizer = new GameVisualizer(logic);
+
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(m_visualizer, BorderLayout.CENTER);
+        panel.add(gameVisualizer, BorderLayout.CENTER);
         getContentPane().add(panel);
         pack();
     }
 
-    @Override
     public void dispose() {
-//        m_visualizer.stopTimer();
-
         super.dispose();
+
+        logic.stopTimer();
     }
 }

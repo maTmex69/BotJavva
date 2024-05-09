@@ -1,7 +1,6 @@
-package gui;
+package State;
 
-import javax.swing.*;
-import java.util.HashMap;
+
 
 public interface WithState {
     void saveWindow();

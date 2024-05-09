@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.TextArea;
 import javax.swing.JPanel;
+
+import State.AbstractWindow;
 import log.LogChangeListener;
 import log.LogEntry;
 import log.LogWindowSource;
