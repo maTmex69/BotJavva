@@ -1,161 +1,244 @@
 package gui;
 
-import java.awt.Dimension;
-import java.awt.Toolkit;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
 
+import java.util.Locale;
+import java.util.ResourceBundle;
+import javax.swing.*;
 import log.Logger;
 
+/**
+ * Главное окно приложения, содержащее панель рабочего стола и меню.
+ */
 public class MainApplicationFrame extends JFrame {
-    private final JDesktopPane desktopPane = new JDesktopPane();
 
+    /**
+     * Текущая локаль для локализации сообщений.
+     */
+    private Locale currentLocale = new Locale("ru", "RU");
+
+    /**
+     * Ресурсы для локализации сообщений.
+     */
+    private ResourceBundle messages = ResourceBundle.getBundle("resources", currentLocale);
+
+    /**
+     * Панель рабочего стола, на которой отображаются внутренние окна.
+     */
+    private JDesktopPane desktopPane;
+
+    /**
+     * Конструктор главного окна приложения.
+     */
     public MainApplicationFrame() {
-        int inset = 50;
+        // Определяем отступы для размещения окна
+        Integer indent = 50;
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds(inset, inset, screenSize.width - inset * 2, screenSize.height - inset * 2);
-        setContentPane(desktopPane);
+        final int indentedWidth = screenSize.width - indent * 2;
+        final int indentedHeight = screenSize.height - indent * 2;
 
-        LogWindow logWindow = createLogWindow();
-        addWindow(logWindow);
+        // Устанавливаем размеры и расположение окна
+        setBounds(indent, indent, indentedWidth, indentedHeight);
 
-        GameWindow gameWindow = new GameWindow();
-        gameWindow.setSize(400, 400);
-        addWindow(gameWindow);
+        // Создаем и устанавливаем панель рабочего стола
+        setContentPane(createDesktopPane());
 
+        // Создаем и устанавливаем меню
         setJMenuBar(generateMenuBar());
+
+        // Устанавливаем операцию по умолчанию при закрытии окна
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        // Добавляем слушатель событий для окна
+        // Добавляем слушатель оконного события для закрытия
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                exitApplication(); // Вызываем метод exitApplication() при закрытии окна
+                exitApplication();
             }
         });
-
     }
 
+    /**
+     * Создает панель рабочего стола, где отображаются внутренние окна.
+     * @return Созданная панель рабочего стола.
+     */
+    private JDesktopPane createDesktopPane() {
+        desktopPane = new JDesktopPane();
+
+        // Добавляем окна на панель рабочего стола
+        addWindow(createLogWindow(), 150, 350);
+        addWindow(new GameWindow(), 400, 400);
+
+        // Загружаем состояние каждого окна
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            ((AbstractWindow) frame).loadWindow();
+        }
+
+        return desktopPane;
+    }
+
+    /**
+     * Создает окно для отображения логов.
+     * @return Созданное окно для отображения логов.
+     */
     protected LogWindow createLogWindow() {
         LogWindow logWindow = new LogWindow(Logger.getDefaultLogSource());
-        logWindow.setLocation(10, 10);
-        logWindow.setSize(300, 800);
-        setMinimumSize(logWindow.getSize());
-        logWindow.pack();
-        Logger.debug("Протокол работает");
+        Logger.debug(messages.getString("ProtocolIsWorking"));
         return logWindow;
     }
 
-    protected void addWindow(JInternalFrame frame) {
+    /**
+     * Добавляет окно на панель рабочего стола.
+     * @param frame Окно для добавления.
+     * @param width Ширина окна.
+     * @param height Высота окна.
+     */
+    protected void addWindow(JInternalFrame frame, int width, int height) {
         desktopPane.add(frame);
+        frame.setSize(width, height);
         frame.setVisible(true);
     }
 
     /**
      * Генерирует строку меню приложения.
-     * Создает и настраивает пункты меню "Режим отображения", "Тесты" и "Меню",
-     * добавляя к ним соответствующие подпункты и обработчики событий.
-     *
-     * @return Строка меню приложения с сгенерированными пунктами меню.
+     * @return Сгенерированная строка меню.
      */
     private JMenuBar generateMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        addFileMenu(menuBar);
-        addLookAndFeelMenu(menuBar);
-        addTestMenu(menuBar);
+
+        menuBar.add(createFileMenu());
+        menuBar.add(createLookAndFeelMenu());
+        menuBar.add(createTestMenu());
+
         return menuBar;
     }
 
     /**
-     * Метод для добавления пункта "Меню" с пунктом "Выход".
-     * Добавляет в главное меню приложения пункт "Меню" с пунктом "Выход",
-     * который позволяет пользователю выйти из приложения с подтверждением.
-     *
-     * @return Строка меню приложения с добавленным пунктом "Файл".
+     * Создает меню файлов.
+     * @return Меню файлов.
      */
-    private void addFileMenu(JMenuBar menuBar) {
-        JMenu fileMenu = new JMenu("Меню");
-        fileMenu.setMnemonic(KeyEvent.VK_F);
+    private JMenu createFileMenu() {
+        JMenu menu = new JMenu(messages.getString("Menu"));
+        menu.setMnemonic(KeyEvent.VK_D);
 
-        JMenuItem exitItem = new JMenuItem("Выход", KeyEvent.VK_X);
-        exitItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.ALT_DOWN_MASK));
-        exitItem.addActionListener((event) -> exitApplication());
+        menu.add(createMenuItem(messages.getString("NewGameWindow"), KeyEvent.VK_N, KeyStroke.getKeyStroke(KeyEvent.VK_R, ActionEvent.ALT_MASK), (event) -> {
+            GameWindow window = new GameWindow();
+            addWindow(window, 400, 400);
+        }));
 
-        fileMenu.add(exitItem);
-        menuBar.add(fileMenu);
-    }
+        menu.add(createMenuItem(messages.getString("LogsWindow"), KeyEvent.VK_L, KeyStroke.getKeyStroke(KeyEvent.VK_L, ActionEvent.ALT_MASK), (event) -> {
+            LogWindow window = new LogWindow(Logger.getDefaultLogSource());
+            addWindow(window, 150, 350);
+        }));
 
-    private void addLookAndFeelMenu(JMenuBar menuBar) {
-        JMenu lookAndFeelMenu = new JMenu("Режим отображения");
-        lookAndFeelMenu.setMnemonic(KeyEvent.VK_V);
-        lookAndFeelMenu.getAccessibleContext().setAccessibleDescription(
-                "Управление режимом отображения приложения");
+        menu.add(exit());
 
-        JMenuItem systemLookAndFeel = createLookAndFeelMenuItem("Системная схема", UIManager.getSystemLookAndFeelClassName());
-        lookAndFeelMenu.add(systemLookAndFeel);
-
-        JMenuItem crossplatformLookAndFeel = createLookAndFeelMenuItem("Универсальная схема", UIManager.getCrossPlatformLookAndFeelClassName());
-        lookAndFeelMenu.add(crossplatformLookAndFeel);
-
-        menuBar.add(lookAndFeelMenu);
-    }
-
-    private JMenuItem createLookAndFeelMenuItem(String label, String className) {
-        JMenuItem menuItem = new JMenuItem(label);
-        menuItem.addActionListener((event) -> {
-            setLookAndFeel(className);
-            this.invalidate();
-        });
-        return menuItem;
-    }
-
-    private void addTestMenu(JMenuBar menuBar) {
-        JMenu testMenu = new JMenu("Тесты");
-        testMenu.setMnemonic(KeyEvent.VK_T);
-        testMenu.getAccessibleContext().setAccessibleDescription(
-                "Тестовые команды");
-
-        JMenuItem addLogMessageItem = new JMenuItem("Сообщение в лог", KeyEvent.VK_S);
-        addLogMessageItem.addActionListener((event) -> {
-            Logger.debug("Новая строка");
-        });
-        testMenu.add(addLogMessageItem);
-
-        menuBar.add(testMenu);
+        return menu;
     }
 
     /**
-     * Метод для завершения работы приложения с подтверждением.
-     * Отображает диалоговое окно с вопросом о подтверждении выхода.
-     * Если пользователь подтверждает выход, приложение завершает свою работу.
+     * Создает элемент меню.
+     * @param text Текст элемента меню.
+     * @param mnemonic Мнемоника элемента меню.
+     * @param accelerator Горячая клавиша элемента меню.
+     * @param action Действие элемента меню.
+     * @return Созданный элемент меню.
      */
-    private void exitApplication() {
-        Object[] options = {"Да", "Нет"};
-        int confirmed = JOptionPane.showOptionDialog(
-                this,
-                "Вы уверены, что хотите выйти?",
-                "Подтверждение выхода",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                options[1]);
-
-        if (confirmed == JOptionPane.YES_OPTION) {
-            System.exit(0);
-        }
+    private JMenuItem createMenuItem(String text, int mnemonic, KeyStroke accelerator, ActionListener action) {
+        JMenuItem item = new JMenuItem(text);
+        item.setMnemonic(mnemonic);
+        item.setAccelerator(accelerator);
+        item.addActionListener(action);
+        return item;
     }
 
+    /**
+     * Создает меню оформления.
+     * @return Меню оформления.
+     */
+    private JMenu createLookAndFeelMenu() {
+        JMenu lookAndFeelMenu = new JMenu(messages.getString("DisplayMode"));
+        lookAndFeelMenu.setMnemonic(KeyEvent.VK_V);
+        lookAndFeelMenu.getAccessibleContext().setAccessibleDescription(messages.getString("ModeControl"));
+
+        lookAndFeelMenu.add(createMenuItem(messages.getString("SystemDiagram"), KeyEvent.VK_S, null, (event) -> {
+            setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            this.invalidate();
+        }));
+
+        lookAndFeelMenu.add(createMenuItem(messages.getString("UniversalScheme"), KeyEvent.VK_U, null, (event) -> {
+            setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+            this.invalidate();
+        }));
+
+        return lookAndFeelMenu;
+    }
+
+    /**
+     * Создает меню тестирования.
+     * @return Меню тестирования.
+     */
+    private JMenu createTestMenu() {
+        JMenu testMenu = new JMenu(messages.getString("Tests"));
+        testMenu.setMnemonic(KeyEvent.VK_T);
+        testMenu.getAccessibleContext().setAccessibleDescription(messages.getString("TestsCommands"));
+
+        JMenuItem addLogMessageItem = new JMenuItem(messages.getString("MessageLog"), KeyEvent.VK_S);
+        addLogMessageItem.addActionListener((event) -> {
+            Logger.debug(messages.getString("NewString"));
+        });
+        testMenu.add(addLogMessageItem);
+
+        return testMenu;
+    }
+
+    /**
+     * Устанавливает внешний вид.
+     * @param className Название класса внешнего вида.
+     */
     private void setLookAndFeel(String className) {
         try {
             UIManager.setLookAndFeel(className);
             SwingUtilities.updateComponentTreeUI(this);
         } catch (ClassNotFoundException | InstantiationException
                  | IllegalAccessException | UnsupportedLookAndFeelException e) {
-            // just ignore
         }
     }
+
+    /**
+     * Завершает работу приложения.
+     */
+    private void exitApplication() {
+        UIManager.put("OptionPane.yesButtonText", messages.getString("Yes"));
+        UIManager.put("OptionPane.noButtonText", messages.getString("No"));
+
+        int confirmation = JOptionPane.showConfirmDialog(this, messages.getString("ConfirmationExitQuestion"),
+                messages.getString("ConfirmationExit"), JOptionPane.YES_NO_OPTION);
+        callCloseDialog();
+    }
+
+    /**
+     * Вызывает диалоговое окно закрытия для каждого окна на панели рабочего стола.
+     */
+    private void callCloseDialog(){
+        for (JInternalFrame frame : desktopPane.getAllFrames()) {
+            ((AbstractWindow) frame).saveWindow();
+        }
+    }
+
+    /**
+     * Создает элемент меню "Выход".
+     * @return Элемент меню "Выход".
+     */
+    private JMenuItem exit() {
+        JMenuItem exitMenuItem = new JMenuItem(messages.getString("Exit"));
+        exitMenuItem.setMnemonic(KeyEvent.VK_Q);
+        exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.ALT_MASK));
+        exitMenuItem.addActionListener((event) -> {
+            exitApplication();
+        });
+        return exitMenuItem;
+    }
+
 }
